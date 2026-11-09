@@ -1,0 +1,313 @@
+<!doctypehtml>
+<html lang="en-us">
+<head>
+  <script src="coi-serviceworker.js"></script>
+  <meta charset="utf-8">
+  <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+  <meta content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" name="viewport">
+  <title>Dusklight</title>
+  <style>
+    :root{--bg:#121212;--panel:#1e1e1e;--border:#333;--text:#e0e0e0;--dim:#888;--accent:#4a90e2;--error:#e57373}
+    *{box-sizing:border-box}[hidden]{display:none!important}
+    body,html{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;font-size:14px}
+    .wrap{max-width:900px;margin:0 auto;padding:16px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px}
+    header h1{margin:0;font-size:20px;color:var(--accent)}
+    header a{color:var(--text);text-decoration:none;border:1px solid var(--border);padding:4px 8px;border-radius:4px;font-size:12px}
+    button{font:inherit;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:8px 16px;cursor:pointer}
+    button:hover:not(:disabled){border-color:var(--accent)}
+    button:disabled{opacity:.4;cursor:not-allowed}
+    .btn-primary{background:var(--accent);color:#fff;border:0;font-weight:700}
+    .btn-ghost{background:0 0}
+    #disclaimer{padding:10px;background:var(--panel);border:1px solid var(--border);border-radius:4px;margin-bottom:12px;font-size:13px;text-align:center;color:var(--dim)}
+    #disclaimer a{color:var(--text);font-weight:600;text-decoration:none}
+    #landing{display:flex;flex-direction:column;gap:12px}
+    #dropzone{padding:24px;border:2px dashed var(--border);border-radius:6px;background:var(--panel);text-align:center;cursor:pointer}
+    #dropzone.dragover,#dropzone:hover{border-color:var(--accent)}
+    #dz-icon{font-weight:700;color:var(--dim);margin-bottom:4px}
+    #dz-title{font-size:16px;font-weight:600}
+    #dz-sub{color:var(--dim);font-size:12px}
+    #dz-file{display:none;margin-top:6px;padding:4px 8px;background:#2a2a2a;color:var(--accent);font-size:12px}
+    #dropzone.has-file #dz-file{display:block}
+    .landing-actions{display:flex;gap:8px;justify-content:center}
+    #status{color:var(--dim);text-align:center;font-size:13px}
+    #status.error{color:var(--error)}
+    progress#copy-progress{width:100%;max-width:400px;margin:0 auto;display:block;accent-color:var(--accent)}
+    .hint{color:var(--dim);font-size:12px;text-align:center}
+    #game{display:flex;flex-direction:column;gap:8px}
+    #frame{position:relative;border:1px solid var(--border);background:#000}
+    canvas#canvas{display:block;width:100%;aspect-ratio:4/3;height:auto;outline:0}
+    .controls{display:flex;align-items:center;gap:8px;padding:8px;background:var(--panel);border:1px solid var(--border)}
+    #game-status{flex:1;color:var(--dim);font-size:13px}
+    .icon-btn{padding:6px 12px}
+    .icon-btn.active{border-color:var(--accent);color:var(--accent)}
+    #touch-overlay{position:absolute;inset:0;pointer-events:none;-webkit-user-select:none;user-select:none}
+    .t-ctl{position:absolute;pointer-events:auto;touch-action:none;display:flex;align-items:center;justify-content:center;border-radius:50%;border:2px solid rgba(255,255,255,.3);background:rgba(0,0,0,.4);color:#fff;font-weight:700}
+    .t-ctl.pressed{background:var(--accent);color:#fff}
+    #t-stick-zone{left:3%;bottom:6%;width:120px;height:120px}
+    #t-stick-nub{position:absolute;width:44%;height:44%;border-radius:50%;background:rgba(255,255,255,.5);left:28%;top:28%;pointer-events:none}
+    .t-btn{width:50px;height:50px;font-size:14px}
+    #t-a{right:4%;bottom:14%}#t-b{right:17%;bottom:5%}#t-x{right:16.5%;bottom:27%}#t-y{right:28%;bottom:16%}#t-z{right:20%;top:4%}
+    #t-cstick-zone{right:4%;bottom:42%;width:90px;height:90px}
+    #t-cstick-nub{position:absolute;width:44%;height:44%;border-radius:50%;background:rgba(255,255,255,.5);left:28%;top:28%;pointer-events:none}
+    #t-l{left:2.5%;top:4%;border-radius:6px;width:70px;height:35px}#t-r{right:2.5%;top:4%;border-radius:6px;width:70px;height:35px}
+    #t-start{left:50%;transform:translateX(-50%);bottom:4%;border-radius:6px;width:80px;height:30px;font-size:12px}
+    .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+    .modal{width:100%;max-width:500px;max-height:80vh;background:var(--panel);border:1px solid var(--border);border-radius:6px;display:flex;flex-direction:column}
+    .modal header{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid var(--border)}
+    .modal header h2{margin:0;font-size:16px;color:var(--accent)}
+    .modal-body{padding:10px;overflow-y:auto}
+    .modal footer{padding:10px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+    .modal-note{color:var(--dim);font-size:12px;margin-top:8px}
+    .bind-section{margin:8px 0 4px;color:var(--accent);font-size:11px;text-transform:uppercase}
+    .bind-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #2a2a2a}
+    .bind-key{min-width:100px;text-align:center;background:#2a2a2a;border:1px solid var(--border);color:var(--accent);padding:4px}
+    .save-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #2a2a2a;font-size:13px}
+    footer.credits{margin-top:16px;padding-top:12px;border-top:1px solid var(--border);color:var(--dim);font-size:12px;text-align:center;line-height:1.6}
+    footer.credits a{color:var(--text);text-decoration:underline}
+    details#log-panel{margin-top:12px}
+    details#log-panel summary{cursor:pointer;color:var(--dim);font-size:12px}
+    pre#log{margin:6px 0 0;padding:8px;max-height:200px;overflow-y:auto;background:#0d0d0d;border:1px solid var(--border);color:var(--dim);font:11px monospace;white-space:pre-wrap}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Dusklight</h1>
+      <a href="https://github.com/sh1ftmaker" target="_blank" rel="noopener">sh1ftmaker Repository</a>
+    </header>
+    
+    <div id="disclaimer">
+      <span>You must provide a dump of your own copy of the original game to run Dusklight.</span> 
+      <a href="https://wiki.dolphin-emu.org/index.php?title=Ripping_Games" target="_blank" rel="noopener">Learn more</a>
+      <div class="disclaimer-privacy">Everything runs locally in your browser — your disc image and save data remain on your device.</div>
+    </div>
+
+    <section id="landing">
+      <div id="dropzone" class="disabled" aria-label="Choose a disc image" role="button" tabindex="0">
+        <div id="dz-icon">[DISC]</div>
+        <div id="dz-title">Drop your disc image here</div>
+        <div id="dz-sub">or click to browse ISO / CISO</div>
+        <div id="dz-file"></div>
+        <input accept=".ciso,.iso,.gcm" hidden id="disc" type="file">
+      </div>
+      
+      <div class="landing-actions">
+        <button class="btn-primary" id="play" disabled>Play</button> 
+        <button class="btn-ghost" id="controls-btn" disabled>Controls</button> 
+        <button class="btn-ghost" id="saves-btn" disabled>Saves</button>
+      </div>
+
+      <div id="status">Checking browser requirements...</div>
+      <progress hidden id="copy-progress" max="100" value="0"></progress>
+      <div class="hint">Runs in browser via WebGPU. Requires current Chrome or Edge.</div>
+    </section>
+
+    <section id="game" hidden>
+      <div id="frame">
+        <canvas height="720" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1" width="960"></canvas>
+        <div id="touch-overlay" hidden>
+          <div id="t-stick-zone" class="t-ctl"><div id="t-stick-nub"></div></div>
+          <div id="t-cstick-zone" class="t-ctl"><div id="t-cstick-nub"></div></div>
+          <div id="t-l" class="t-ctl t-btn" data-mask="64">L</div>
+          <div id="t-r" class="t-ctl t-btn" data-mask="32">R</div>
+          <div id="t-z" class="t-ctl t-btn" data-mask="16">Z</div>
+          <div id="t-a" class="t-ctl t-btn" data-mask="256">A</div>
+          <div id="t-b" class="t-ctl t-btn" data-mask="512">B</div>
+          <div id="t-x" class="t-ctl t-btn" data-mask="1024">X</div>
+          <div id="t-y" class="t-ctl t-btn" data-mask="2048">Y</div>
+          <div id="t-start" class="t-ctl t-btn" data-mask="4096">START</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div id="game-status"></div>
+        <button class="icon-btn" id="controls-btn2" title="Controls">Controls</button> 
+        <button class="icon-btn" id="touch-toggle" title="Touch controls">Touch</button> 
+        <button class="icon-btn" id="saves-btn2" title="Saves">Saves</button> 
+        <button class="icon-btn" id="fullscreen" title="Fullscreen">Fullscreen</button>
+      </div>
+      <div id="rotate-hint" class="hint">Rotate device for landscape view.</div>
+    </section>
+
+    <details id="log-panel">
+      <summary>Log</summary>
+      <pre id="log"></pre>
+    </details>
+
+    <footer class="credits">
+      Original code by <a href="https://github.com/sh1ftmaker" target="_blank" rel="noopener">sh1ftmaker</a>.<br>
+      New UI and Controller Support by <a href="https://github.com/htmlfan123" target="_blank" rel="noopener">htmlfan123</a>.
+    </footer>
+  </div>
+
+  <div id="controls-backdrop" class="backdrop" hidden>
+    <div class="modal" aria-label="Controls" role="dialog">
+      <header>
+        <h2>Keyboard & Controller Mapping</h2>
+        <button class="icon-btn" id="controls-close">X</button>
+      </header>
+      <div class="modal-body">
+        <div id="bind-list"></div>
+        <p class="modal-note">Click a binding, then press a key or Bluetooth controller button. Esc cancels.</p>
+        <p class="modal-note" hidden id="controls-running-note">Changes apply next time the page is reloaded.</p>
+      </div>
+      <footer>
+        <button class="btn-ghost" id="controls-reset">Reset</button> 
+        <button class="btn-primary" id="controls-save">Save</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="capture-overlay" class="backdrop" hidden style="z-index:60;color:var(--text)">Press a key or controller button... (Esc to cancel)</div>
+
+  <div id="saves-backdrop" class="backdrop" hidden>
+    <div class="modal" aria-label="Saves" role="dialog">
+      <header>
+        <h2>Save Data</h2>
+        <button class="icon-btn" id="saves-close">X</button>
+      </header>
+      <div class="modal-body">
+        <div id="saves-list"></div>
+        <p class="modal-note">Saves persist in browser storage. Download or import .gci files.</p>
+      </div>
+      <footer>
+        <input accept=".gci" hidden id="save-import-input" type="file"> 
+        <button class="btn-ghost" id="save-import">Import .gci...</button>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    "use strict";
+    var canvasElement=document.getElementById("canvas"),statusElement=document.getElementById("status"),gameStatusElement=document.getElementById("game-status"),progressElement=document.getElementById("copy-progress"),discElement=document.getElementById("disc"),dropzone=document.getElementById("dropzone"),playElement=document.getElementById("play"),fullscreenElement=document.getElementById("fullscreen"),logElement=document.getElementById("log"),runtimeReady=!1,started=!1,failed=!1,selectedFile=null,USER_DIR="/libsdl/TwilitRealm/Dusklight";
+    function appendLog(e){logElement.textContent+=e+"\n",logElement.textContent.length>262144&&(logElement.textContent=logElement.textContent.slice(-131072)),logElement.scrollTop=logElement.scrollHeight}
+    function setStatusText(e,t){statusElement.innerHTML=e,statusElement.classList.toggle("error",!!t),gameStatusElement.innerHTML=e}
+    function showError(e){failed=!0,progressElement.hidden=!0,updateControls(),setStatusText(e,!0),document.getElementById("log-panel").open=!0}
+    function updateControls(){dropzone.classList.toggle("disabled",failed||started||!runtimeReady),playElement.disabled=failed||started||!(runtimeReady&&selectedFile),document.getElementById("controls-btn").disabled=failed,document.getElementById("saves-btn").disabled=failed||!runtimeReady}
+    function checkRequirements(){return navigator.gpu?window.crossOriginIsolated?"function"==typeof WebAssembly.Suspending||(showError("<b>This browser does not support WebAssembly JSPI yet</b>, which Dusklight requires. Use Chrome or Edge."),!1):(showError("<b>This page is not cross-origin isolated</b>, so SharedArrayBuffer is unavailable."),!1):(showError("<b>WebGPU is not available.</b> Use Chrome or Edge."),!1)}
+    checkRequirements()&&setStatusText("Loading runtime&hellip;");
+    
+    var BUTTON_IDS=[256,512,1024,2048,4096,16,64,32,8,4,1,2],AXIS_IDS=[0,1,2,3,4,5,6,7,8,9],DEFAULT_BUTTONS=[44,-2,8,20,40,43,-4,225,82,81,80,79],DEFAULT_AXES=[7,4,26,22,-1,-1,-1,-1,-4,225],BINDINGS_KEY="dusklight.bindings.v1";
+    function loadBindings(){try{var e=localStorage.getItem(BINDINGS_KEY);if(e){var t=JSON.parse(e);if(Array.isArray(t.buttons)&&12===t.buttons.length&&Array.isArray(t.axes)&&10===t.axes.length)return t}}catch(e){}return{buttons:DEFAULT_BUTTONS.slice(),axes:DEFAULT_AXES.slice()}}
+    var bindings=loadBindings();
+    function buildKbnd(e){var t=new ArrayBuffer(740),n=new DataView(t);n.setUint8(0,75),n.setUint8(1,66),n.setUint8(2,78),n.setUint8(3,68),n.setInt32(4,3,!0);for(var a=32,i=0;i<4;i++){var o=0===i;n.setUint8(a,o?1:0),a+=1;for(var r=0;r<12;r++)n.setInt32(a,o?e.buttons[r]:-1,!0),n.setUint16(a+4,BUTTON_IDS[r],!0),a+=8;for(var s=0;s<10;s++)n.setInt32(a,o?e.axes[s]:-1,!0),n.setUint16(a+4,AXIS_IDS[s],!0),n.setInt16(a+6,0,!0),a+=8}return new Uint8Array(t)}
+    var CODE_TO_SCANCODE=function(){for(var e={Enter:40,Escape:41,Backspace:42,Tab:43,Space:44,Minus:45,Equal:46,BracketLeft:47,BracketRight:48,Backslash:49,Semicolon:51,Quote:52,Backquote:53,Comma:54,Period:55,Slash:56,CapsLock:57,PrintScreen:70,ScrollLock:71,Pause:72,Insert:73,Home:74,PageUp:75,Delete:76,End:77,PageDown:78,ArrowRight:79,ArrowLeft:80,ArrowDown:81,ArrowUp:82,ControlLeft:224,ShiftLeft:225,AltLeft:226,MetaLeft:227,ControlRight:228,ShiftRight:229,AltRight:230,MetaRight:231},t=0;t<26;t++)e["Key"+String.fromCharCode(65+t)]=4+t;for(var n=1;n<=9;n++)e["Digit"+n]=29+n;e.Digit0=39;for(var a=1;a<=12;a++)e["F"+a]=57+a;return e}(),SCANCODE_NAMES=function(){var e={"-1":"—","-2":"Left Click","-3":"Middle Click","-4":"Right Click","-5":"Mouse 4","-6":"Mouse 5"};for(var t in CODE_TO_SCANCODE)e[CODE_TO_SCANCODE[t]]=t.replace(/^Key/,"").replace(/^Digit/,"").replace(/^Arrow/,"").replace("Left"," Left").replace("Right"," Right").trim();return e[44]="Space",e[40]="Enter",e[43]="Tab",e}();
+    function scancodeName(e){return SCANCODE_NAMES[e]||"scan "+e}
+    function ensureDir(e){for(var t=e.split("/").filter(Boolean),n="",a=0;a<t.length;a++){n+="/"+t[a];try{Module.FS.mkdir(n)}catch(e){}}}
+    var persistenceReady=!1;
+    function setupPersistence(){return new Promise((function(e){try{ensureDir(USER_DIR),Module.FS.mount(Module.IDBFS,{},USER_DIR),Module.FS.syncfs(!0,(function(t){t&&console.error("IDBFS populate failed:",t),persistenceReady=!t,e()}))}catch(t){console.error("IDBFS mount failed:",t),e()}}))}
+    function persist(){if(persistenceReady)try{Module.FS.syncfs(!1,(function(e){e&&console.error("syncfs:",e)}))}catch(e){}}
+    function seedUserData(){ensureDir(USER_DIR),Module.FS.writeFile(USER_DIR+"/keyboard_bindings.dat",buildKbnd(bindings));var e=!1;try{Module.FS.stat(USER_DIR+"/config.json"),e=!0}catch(e){}e||Module.FS.writeFile(USER_DIR+"/config.json",JSON.stringify({"backend.wasPresetChosen":!0,"backend.isoVerification":0,"game.enableMouseAim":!0,"game.enableMouseCamera":!0}))}
+    setInterval(persist,15e3),document.addEventListener("visibilitychange",(function(){"hidden"===document.visibilityState&&persist()}));
+    
+    var Module={canvas:canvasElement,print(...e){console.log(...e),appendLog(e.join(" "))},printErr(...e){console.error(...e),appendLog(e.join(" "))},onRuntimeInitialized(){failed||setupPersistence().then((function(){runtimeReady=!0,setStatusText("Waiting for disc image... Select ISO/CISO and press <b>Play</b>."),updateControls(),maybeAutoLoadFromQuery()}))},onAbort(e){showError("<b>Runtime aborted:</b> "+e)},setStatus(e){failed||runtimeReady||!e||setStatusText("Loading runtime&hellip; "+e)},totalDependencies:0,monitorRunDependencies(e){this.totalDependencies=Math.max(this.totalDependencies,e),failed||runtimeReady||!e||setStatusText("Loading runtime&hellip; ("+(this.totalDependencies-e)+"/"+this.totalDependencies+")")}};
+    function setSelectedFile(e){e&&(/\.(ciso|iso|gcm)$/i.test(e.name)?(selectedFile=e,dropzone.classList.add("has-file"),document.getElementById("dz-file").textContent=e.name+" · "+(e.size/1073741824).toFixed(2)+" GB",setStatusText("Ready. Press <b>Play</b> to start."),updateControls()):setStatusText("<b>"+e.name+"</b> is not supported format. Use ISO/CISO."))}
+    async function readDisc(e,t){if(e.stream){for(var n=new Uint8Array(e.size),a=e.stream().getReader(),i=0;;){var o=await a.read();if(o.done)break;n.set(o.value,i),t((i+=o.value.length)/e.size)}return n}var r=await e.arrayBuffer();return t(1),new Uint8Array(r)}
+    function launchGame(e){Module.FS.writeFile("/game.ciso",e),progressElement.hidden=!0,document.getElementById("landing").hidden=!0,document.getElementById("game").hidden=!1,setStatusText("<b>Running.</b> Click canvas to capture input."),document.getElementById("controls-running-note").hidden=!1,applyTouchVisibility(),canvasElement.focus();try{seedUserData();var t=Module.callMain(["--dvd","/game.ciso"]);t instanceof Promise&&t.catch((function(e){console.error(e),showError("<b>Runtime error:</b> "+e)})),setTimeout(persist,5e3)}catch(e){console.error(e),showError("<b>Runtime error:</b> "+e)}}
+    async function maybeAutoLoadFromQuery(){var e=new URLSearchParams(location.search).get("dump");if(!e||started||failed)return!1;started=!0,updateControls();try{setStatusText("Downloading disc image&hellip;"),progressElement.hidden=!1;var t=await fetch(e);if(!t.ok)throw new Error("HTTP "+t.status);var n,a=Number(t.headers.get("Content-Length"))||0;if(t.body&&a){n=new Uint8Array(a);for(var i=t.body.getReader(),o=0;;){var r=await i.read();if(r.done)break;n.set(r.value,o),o+=r.value.length,progressElement.value=Math.floor(o/a*100)}n=n.subarray(0,o)}else n=new Uint8Array(await t.arrayBuffer());return launchGame(n),!0}catch(e){return console.error(e),started=!1,progressElement.hidden=!0,setStatusText("<b>Could not load disc from URL:</b> "+e,!0),statusElement.classList.remove("error"),updateControls(),!1}}
+    
+    window.addEventListener("error",(function(e){failed||started||showError("<b>Unhandled exception:</b> "+e.message)})),window.addEventListener("unhandledrejection",(function(e){failed||started||showError("<b>Unhandled rejection:</b> "+(e.reason&&e.reason.message||e.reason))})),dropzone.addEventListener("click",(function(){failed||started||!runtimeReady||discElement.click()})),dropzone.addEventListener("keydown",(function(e){"Enter"!==e.code&&"Space"!==e.code||(e.preventDefault(),dropzone.click())})),discElement.addEventListener("change",(function(){setSelectedFile(discElement.files[0])})),["dragover","dragenter"].forEach((function(e){dropzone.addEventListener(e,(function(e){e.preventDefault(),dropzone.classList.add("dragover")}))})),["dragleave","drop"].forEach((function(e){dropzone.addEventListener(e,(function(e){e.preventDefault(),dropzone.classList.remove("dragover")}))})),dropzone.addEventListener("drop",(function(e){failed||started||!runtimeReady||e.dataTransfer.files.length>0&&setSelectedFile(e.dataTransfer.files[0])})),playElement.addEventListener("click",(async function(){if(!started&&!failed&&runtimeReady&&selectedFile){var e;started=!0,updateControls();try{setStatusText("Loading disc image into memory..."),progressElement.hidden=!1,e=await readDisc(selectedFile,(function(e){progressElement.value=Math.floor(100*e)}))}catch(e){return console.error(e),void showError("<b>Failed to load disc image:</b> "+e)}launchGame(e)}})),fullscreenElement.addEventListener("click",(function(){document.getElementById("frame").requestFullscreen().then((function(){canvasElement.focus()})).catch((function(e){console.error("fullscreen failed:",e)}))}));
+    
+    var BIND_ROWS=[{section:"Movement"},{kind:"axis",idx:2,label:"Move Up"},{kind:"axis",idx:3,label:"Move Down"},{kind:"axis",idx:1,label:"Move Left"},{kind:"axis",idx:0,label:"Move Right"},{section:"Actions"},{kind:"button",idx:0,label:"A — Action / Roll"},{kind:"button",idx:1,label:"B — Sword"},{kind:"button",idx:2,label:"X — Item"},{kind:"button",idx:3,label:"Y — Item"},{kind:"button",idx:6,label:"L — Target lock"},{kind:"button",idx:7,label:"R — Shield"},{kind:"button",idx:5,label:"Z — Map / Midna"},{kind:"button",idx:4,label:"Start — Pause"},{section:"D-Pad"},{kind:"button",idx:8,label:"D-Pad Up"},{kind:"button",idx:9,label:"D-Pad Down"},{kind:"button",idx:10,label:"D-Pad Left"},{kind:"button",idx:11,label:"D-Pad Right"}],pendingBindings=null,captureRow=null;
+    function getBind(e,t){return"axis"===t.kind?e.axes[t.idx]:e.buttons[t.idx]}
+    function setBind(e,t,n){"axis"===t.kind?e.axes[t.idx]=n:e.buttons[t.idx]=n}
+    function renderBindList(){var e=document.getElementById("bind-list");e.textContent="",BIND_ROWS.forEach((function(t){if(t.section){var n=document.createElement("div");return n.className="bind-section",n.textContent=t.section,void e.appendChild(n)}var a=document.createElement("div");a.className="bind-row";var i=document.createElement("label");i.textContent=t.label;var o=document.createElement("button");o.className="bind-key",o.textContent=scancodeName(getBind(pendingBindings,t)),o.addEventListener("click",(function(){startCapture(t,o)})),a.appendChild(i),a.appendChild(o),e.appendChild(a)}))}
+    function startCapture(e,t){captureRow=e,t.classList.add("capturing"),t.textContent="…",document.getElementById("capture-overlay").hidden=!1}
+    function finishCapture(e){document.getElementById("capture-overlay").hidden=!0,captureRow&&null!==e&&(BIND_ROWS.forEach((function(t){t.section||t===captureRow||getBind(pendingBindings,t)!==e||setBind(pendingBindings,t,-1)})),setBind(pendingBindings,captureRow,e)),captureRow=null,renderBindList()}
+    function openControlsModal(){pendingBindings={buttons:bindings.buttons.slice(),axes:bindings.axes.slice()},renderBindList(),document.getElementById("controls-backdrop").hidden=!1}
+    function closeControlsModal(){document.getElementById("controls-backdrop").hidden=!0,finishCapture(null)}
+    function walkFiles(e,t){var n;try{n=Module.FS.readdir(e)}catch(e){return t}return n.forEach((function(n){if("."!==n&&".."!==n){var a,i=e+"/"+n;try{a=Module.FS.stat(i)}catch(e){return}Module.FS.isDir(a.mode)?walkFiles(i,t):t.push({path:i,name:n,size:a.size})}})),t}
+    function renderSavesList(){var e=document.getElementById("saves-list");e.textContent="";var t=walkFiles(USER_DIR,[]).filter((function(e){return/\.gci$/i.test(e.name)}));if(0===t.length){var n=document.createElement("p");return n.className="modal-note",n.textContent="No save files found.",void e.appendChild(n)}t.forEach((function(t){var n=document.createElement("div");n.className="save-row";var a=document.createElement("span");a.className="name",a.textContent=t.name;var i=document.createElement("span");i.className="size",i.textContent=(t.size/1024).toFixed(1)+" KB";var o=document.createElement("button");o.className="btn-ghost",o.textContent="Download",o.addEventListener("click",(function(){var e=Module.FS.readFile(t.path),n=new Blob([e],{type:"application/octet-stream"}),a=document.createElement("a");a.href=URL.createObjectURL(n),a.download=t.name,a.click(),URL.revokeObjectURL(a.href)})),n.appendChild(a),n.appendChild(i),n.appendChild(o),e.appendChild(n)}))}
+    function regionCardDir(){for(var e=["EUR","USA","JAP"],t=0;t<e.length;t++)try{var n=Module.FS.stat(USER_DIR+"/"+e[t]);if(Module.FS.isDir(n.mode))return USER_DIR+"/"+e[t]+"/Card A"}catch(e){}return USER_DIR+"/EUR/Card A"}
+    function openSavesModal(){renderSavesList(),document.getElementById("saves-backdrop").hidden=!1}
+    
+    window.addEventListener("keydown",(function(e){if(captureRow)if(e.preventDefault(),e.stopPropagation(),"Escape"!==e.code){var t=CODE_TO_SCANCODE[e.code];finishCapture(void 0!==t?t:null)}else finishCapture(null)}),!0),document.getElementById("capture-overlay").addEventListener("mousedown",(function(e){if(captureRow){e.preventDefault();var t=[-2,-3,-4,-5,-6][e.button];finishCapture(void 0!==t?t:null)}})),document.getElementById("capture-overlay").addEventListener("contextmenu",(function(e){e.preventDefault()})),document.getElementById("controls-btn").addEventListener("click",openControlsModal),document.getElementById("controls-btn2").addEventListener("click",openControlsModal),document.getElementById("controls-close").addEventListener("click",closeControlsModal),document.getElementById("controls-reset").addEventListener("click",(function(){pendingBindings={buttons:DEFAULT_BUTTONS.slice(),axes:DEFAULT_AXES.slice()},renderBindList()})),document.getElementById("controls-save").addEventListener("click",(function(){if(pendingBindings.axes[8]=pendingBindings.buttons[6],pendingBindings.axes[9]=pendingBindings.buttons[7],bindings=pendingBindings,localStorage.setItem(BINDINGS_KEY,JSON.stringify(bindings)),runtimeReady&&!started)try{seedUserData(),persist()}catch(e){}closeControlsModal()})),document.getElementById("saves-btn").addEventListener("click",openSavesModal),document.getElementById("saves-btn2").addEventListener("click",openSavesModal),document.getElementById("saves-close").addEventListener("click",(function(){document.getElementById("saves-backdrop").hidden=!0})),document.getElementById("save-import").addEventListener("click",(function(){document.getElementById("save-import-input").click()})),document.getElementById("save-import-input").addEventListener("change",(async function(){var e=this.files[0];if(e){var t=new Uint8Array(await e.arrayBuffer()),n=regionCardDir();ensureDir(n),Module.FS.writeFile(n+"/"+e.name,t),persist(),renderSavesList(),this.value=""}}));
+    
+    var TOUCH_KEY="dusklight.touch",isTouchDevice=navigator.maxTouchPoints>0||window.matchMedia("(pointer: coarse)").matches,touchEnabled=function(){var e=localStorage.getItem(TOUCH_KEY);return null===e?isTouchDevice:"1"===e}(),padState={buttons:0,stickX:0,stickY:0,substickX:0,substickY:0};
+    function sendPad(){if(started&&Module.ccall){var e=64&padState.buttons?255:0,t=32&padState.buttons?255:0;try{Module.ccall("dusk_web_virtual_pad",null,["number","number","number","number","number","number","number"],[padState.buttons,padState.stickX,padState.stickY,padState.substickX,padState.substickY,e,t])}catch(e){}}}
+    function clearPad(){if(started&&Module.ccall)try{Module.ccall("dusk_web_virtual_pad_clear",null,[],[])}catch(e){}}
+    function applyTouchVisibility(){document.getElementById("touch-overlay").hidden=!(touchEnabled&&started),document.getElementById("touch-toggle").classList.toggle("active",touchEnabled),touchEnabled||(padState={buttons:0,stickX:0,stickY:0,substickX:0,substickY:0},clearPad())}
+    function makeVirtualStick(e,t,n,a,i){var o=document.getElementById(e),r=document.getElementById(t),s=i&&i.invertX?-1:1,d=i&&i.invertY?-1:1,l=null;function c(e){var t=o.getBoundingClientRect(),i=t.left+t.width/2,l=t.top+t.height/2,c=t.width/2,u=e.clientX-i,m=e.clientY-l,p=Math.hypot(u,m);p>c&&(u=u/p*c,m=m/p*c),padState[n]=Math.round(s*(u/c)*127),padState[a]=Math.round(d*(-m/c)*127),r.style.left=28+u/c*28+"%",r.style.top=28+m/c*28+"%",sendPad()}function u(){l=null,padState[n]=0,padState[a]=0,r.style.left="28%",r.style.top="28%",sendPad()}o.addEventListener("pointerdown",(function(e){e.preventDefault(),l=e.pointerId,o.setPointerCapture(e.pointerId),c(e)})),o.addEventListener("pointermove",(function(e){e.pointerId===l&&c(e)})),o.addEventListener("pointerup",(function(e){e.pointerId===l&&u()})),o.addEventListener("pointercancel",(function(e){e.pointerId===l&&u()}))}
+    document.getElementById("touch-toggle").addEventListener("click",(function(){touchEnabled=!touchEnabled,localStorage.setItem(TOUCH_KEY,touchEnabled?"1":"0"),applyTouchVisibility()})),document.querySelectorAll("#touch-overlay .t-btn").forEach((function(e){var t=parseInt(e.dataset.mask,10);function n(n){e.classList.remove("pressed"),padState.buttons&=~t,sendPad()}e.addEventListener("pointerdown",(function(n){n.preventDefault(),e.setPointerCapture(n.pointerId),e.classList.add("pressed"),padState.buttons|=t,sendPad()})),e.addEventListener("pointerup",n),e.addEventListener("pointercancel",n)})),makeVirtualStick("t-stick-zone","t-stick-nub","stickX","stickY"),makeVirtualStick("t-cstick-zone","t-cstick-nub","substickX","substickY",{invertX:!0});
+
+    // ============================================================
+    // BLUETOOTH CONTROLLER API & CUSTOM REMAPPING INTEGRATION
+    // ============================================================
+    const GAMEPAD_BINDINGS_KEY = "dusklight.gamepad_bindings.v1";
+    const GC_MASK = { A: 256, B: 512, X: 1024, Y: 2048, START: 4096, Z: 16, L: 64, R: 32, UP: 8, DOWN: 4, LEFT: 1, RIGHT: 2 };
+    const DEFAULT_GAMEPAD_MAP = {
+      buttons: { 0: GC_MASK.A, 1: GC_MASK.B, 2: GC_MASK.X, 3: GC_MASK.Y, 4: GC_MASK.L, 5: GC_MASK.R, 7: GC_MASK.Z, 9: GC_MASK.START, 12: GC_MASK.UP, 13: GC_MASK.DOWN, 14: GC_MASK.LEFT, 15: GC_MASK.RIGHT }
+    };
+
+    function loadGamepadBindings() {
+      try {
+        const saved = localStorage.getItem(GAMEPAD_BINDINGS_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+      return JSON.parse(JSON.stringify(DEFAULT_GAMEPAD_MAP));
+    }
+    let gamepadBindings = loadGamepadBindings();
+
+    function applyDeadzone(val, deadzone = 0.18) {
+      if (Math.abs(val) < deadzone) return 0;
+      const sign = Math.sign(val);
+      return sign * ((Math.abs(val) - deadzone) / (1.0 - deadzone));
+    }
+
+    function pollGamepads() {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      let activeGamepad = null;
+      for (let i = 0; i < gamepads.length; i++) {
+        if (gamepads[i] && gamepads[i].connected) {
+          activeGamepad = gamepads[i];
+          break;
+        }
+      }
+
+      if (activeGamepad && started && Module.ccall) {
+        let buttonsMask = 0;
+        activeGamepad.buttons.forEach((btn, index) => {
+          if (btn.pressed && gamepadBindings.buttons[index]) {
+            buttonsMask |= gamepadBindings.buttons[index];
+          }
+        });
+
+        const stickX = Math.round(applyDeadzone(activeGamepad.axes[0] || 0) * 127);
+        const stickY = Math.round(applyDeadzone(-(activeGamepad.axes[1] || 0)) * 127);
+        const substickX = Math.round(applyDeadzone(activeGamepad.axes[2] || 0) * 127);
+        const substickY = Math.round(applyDeadzone(-(activeGamepad.axes[3] || 0)) * 127);
+        const triggerL = activeGamepad.buttons[6] ? Math.round(activeGamepad.buttons[6].value * 255) : (buttonsMask & GC_MASK.L ? 255 : 0);
+        const triggerR = activeGamepad.buttons[7] ? Math.round(activeGamepad.buttons[7].value * 255) : (buttonsMask & GC_MASK.R ? 255 : 0);
+
+        try {
+          Module.ccall("dusk_web_virtual_pad", null, ["number", "number", "number", "number", "number", "number", "number"], [buttonsMask, stickX, stickY, substickX, substickY, triggerL, triggerR]);
+        } catch (e) {}
+      }
+      requestAnimationFrame(pollGamepads);
+    }
+    requestAnimationFrame(pollGamepads);
+
+    window.addEventListener("gamepadconnected", (e) => {
+      setStatusText("Controller connected: <b>" + e.gamepad.id + "</b>");
+    });
+    window.addEventListener("gamepaddisconnected", (e) => {
+      setStatusText("Controller disconnected.");
+    });
+  </script>
+
+  <div id="cloudflare-disclaimer-popup" style="position:fixed;bottom:20px;right:20px;z-index:999999;background:#1e1e1e;color:#e0e0e0;padding:12px 16px;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.5);font-family:system-ui,sans-serif;font-size:13px;border-left:3px solid #4a90e2;max-width:320px;transition:opacity 0.5s ease">
+    <strong>Disclaimer:</strong> Original code by <a href="https://github.com/sh1ftmaker" target="_blank" style="color:#4a90e2;text-decoration:underline">sh1ftmaker</a>. New UI and controller support by <a href="https://github.com/htmlfan123" target="_blank" style="color:#4a90e2;text-decoration:underline">htmlfan123</a>.
+  </div>
+  <script>
+    setTimeout(function(){
+      var popup=document.getElementById("cloudflare-disclaimer-popup");
+      if(popup){
+        popup.style.opacity="0";
+        setTimeout(function(){popup.remove();},500);
+      }
+    },10000);
+  </script>
+  <script async src="dusklight.js"></script>
+</body>
+</html>
